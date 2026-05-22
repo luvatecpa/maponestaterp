@@ -215,11 +215,20 @@
       map.fitBounds(bounds);
       map.setMaxBounds(bounds);
 
-      var markerIcon = L.divIcon({
-        className: 'graffiti-marker',
-        iconSize: [16,16],
-        iconAnchor: [8,8]
-      });
+       var normalIcon = L.icon({
+         iconUrl: 'marker.png',
+         iconSize: [32, 38],
+         iconAnchor: [16, 38],
+         popupAnchor: [0, -38],
+         tooltipAnchor: [0, -32]
+       });
+       var hoverIcon = L.icon({
+         iconUrl: 'marker-hover.png',
+         iconSize: [32, 38],
+         iconAnchor: [16, 38],
+         popupAnchor: [0, -38],
+         tooltipAnchor: [0, -32]
+       });
 
       // --- Marker layer ---
       var markerLayer = L.layerGroup().addTo(map);
@@ -251,10 +260,10 @@
        function renderMarkers() {
         markerLayer.clearLayers();
         allData.forEach(function(spot){
-          var marker = L.marker([spot.y, spot.x], {icon:markerIcon}).addTo(markerLayer);
+          var marker = L.marker([spot.y, spot.x], {icon:normalIcon}).addTo(markerLayer);
 
           marker.bindTooltip(buildTooltipHTML(spot), {
-            direction:'top', offset:[0,-12],
+            direction:'top', offset:[0,-18],
             className:'graffiti-tooltip', interactive:true
           });
 
@@ -264,6 +273,9 @@
           }
           popupHTML += '</div>';
           marker.bindPopup(popupHTML, {className:'graffiti-tooltip',closeButton:false});
+
+          marker.on('mouseover', function(){ this.setIcon(hoverIcon); });
+          marker.on('mouseout', function(){ this.setIcon(normalIcon); });
 
           marker._spotData = spot;
         });
