@@ -294,6 +294,8 @@
               });
             }
 
+            subscribeData();
+
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app-content').classList.add('visible');
             initApp();
@@ -302,6 +304,7 @@
             isAdmin = false;
             if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
             sessionToken = null;
+            if (graffitiUnsub) { graffitiUnsub(); graffitiUnsub = null; }
 
             var loginBtn = document.getElementById('login-btn');
             var loginErr = document.getElementById('login-error');
@@ -318,6 +321,7 @@
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('app-content').classList.add('visible');
         isAdmin = params.get('admin') === adminKey;
+        subscribeData();
         initApp();
       }
 
@@ -368,6 +372,7 @@
       var map, markerLayer, normalIcon, hoverIcon;
       var bounds, allData, editingId;
       var sessionToken = null, sessionUnsub = null;
+      var graffitiUnsub = null;
 
       function refreshUI(){
         var oldLogout = document.getElementById('btn-logout');
@@ -455,22 +460,23 @@
           if (e.target === this) closeModal();
         });
 
-        // --- Load data ---
-        if (firestoreAvailable) {
-          db.collection('graffiti').orderBy('createdAt','desc').onSnapshot(function(snap){
-            allData = [];
-            snap.forEach(function(doc){
-              var d = doc.data();
-              allData.push({id:doc.id, x:d.x, y:d.y, nombre:d.nombre, descripcion:d.descripcion||'', imagen:d.imagen||''});
-            });
-            renderMarkers();
-          }, function(err){
-            console.warn('Firestore error:', err.message);
-            loadLocalData();
+      }
+
+      // --- Subscribe to Firestore graffiti data ---
+      function subscribeData() {
+        if (graffitiUnsub) { graffitiUnsub(); graffitiUnsub = null; }
+        if (!firestoreAvailable) { loadLocalData(); return; }
+        graffitiUnsub = db.collection('graffiti').orderBy('createdAt','desc').onSnapshot(function(snap){
+          allData = [];
+          snap.forEach(function(doc){
+            var d = doc.data();
+            allData.push({id:doc.id, x:d.x, y:d.y, nombre:d.nombre, descripcion:d.descripcion||'', imagen:d.imagen||''});
           });
-        } else {
+          if (map) renderMarkers();
+        }, function(err){
+          console.warn('Firestore error:', err.message);
           loadLocalData();
-        }
+        });
       }
 
       // ========================
