@@ -248,22 +248,24 @@
         return d.innerHTML;
       }
 
-      function renderMarkers() {
+       function renderMarkers() {
         markerLayer.clearLayers();
         allData.forEach(function(spot){
           var marker = L.marker([spot.y, spot.x], {icon:markerIcon}).addTo(markerLayer);
+
           marker.bindTooltip(buildTooltipHTML(spot), {
             direction:'top', offset:[0,-12],
             className:'graffiti-tooltip', interactive:true
           });
-          marker.on('click', function(){
-            var popup = '<div style="text-align:center;min-width:200px;"><strong>'+escapeHTML(spot.nombre||'Sin nombre')+'</strong>';
-            if (spot.imagen) {
-              popup += '<br><img src="'+escapeHTML(spot.imagen)+'" style="max-width:260px;max-height:200px;border-radius:8px;margin-top:6px" onerror="this.style.display=\'none\'">';
-            }
-            popup += '</div>';
-            marker.bindPopup(popup, {className:'graffiti-tooltip',closeButton:false}).openPopup();
-          });
+
+          var popupHTML = '<div style="text-align:center;min-width:200px;"><strong>'+escapeHTML(spot.nombre||'Sin nombre')+'</strong>';
+          if (spot.imagen) {
+            popupHTML += '<br><img src="'+escapeHTML(spot.imagen)+'" style="max-width:260px;max-height:200px;border-radius:8px;margin-top:6px" onerror="this.style.display=\'none\'">';
+          }
+          popupHTML += '</div>';
+          marker.bindPopup(popupHTML, {className:'graffiti-tooltip',closeButton:false});
+
+          marker._spotData = spot;
         });
         document.getElementById('total-label').textContent = allData.length + ' grafitis';
       }
