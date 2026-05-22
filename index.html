@@ -313,7 +313,7 @@
           err.textContent = 'Email o contraseña incorrectos';
           err.classList.add('show');
           btn.disabled = false;
-          btn.textContent = 'Entrar';
+          btn.textContent = 'LOGIN';
         });
       };
 
@@ -326,6 +326,10 @@
 
       // --- Logout ---
       window.doLogout = function(){
+        if (db && currentUser) {
+          db.collection('sessions').doc(currentUser.uid).delete().catch(function(){});
+        }
+        if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
         if (auth) { auth.signOut(); }
       };
 
@@ -334,6 +338,7 @@
       // ========================
       var map, markerLayer, normalIcon, hoverIcon;
       var bounds, allData, editingId;
+      var sessionToken = null, sessionUnsub = null;
 
       function initApp(){
         // Prevent double init
@@ -387,6 +392,27 @@
             '<button class="btn admin" onclick="toggleAdminInfo()">&#128736; Admin activo</button>');
           map.getContainer().style.cursor = 'crosshair';
           toast('Modo administrador — haz click en el mapa para agregar puntos', 'success');
+        }
+
+        // --- Session management: 1 device limit ---
+        if (firestoreAvailable && currentUser) {
+          sessionToken = 's_'+Date.now()+'_'+Math.random().toString(36).substr(2,9);
+          db.collection('sessions').doc(currentUser.uid).set({
+            sessionToken: sessionToken,
+            lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+            email: currentUser.email
+          }).catch(function(){});
+
+          sessionUnsub = db.collection('sessions').doc(currentUser.uid).onSnapshot(function(doc){
+            if (!doc.exists || !doc.data().sessionToken) return;
+            if (doc.data().sessionToken !== sessionToken) {
+              if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
+              toast('Has iniciado sesion en otro dispositivo', 'error');
+              setTimeout(function(){
+                if (auth) auth.signOut();
+              }, 600);
+            }
+          });
         }
 
         // --- Click en mapa (admin) ---

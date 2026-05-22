@@ -27,6 +27,9 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create, update, delete: if request.auth != null && request.auth.uid == 'feT0EwBBA6VwFyJC3lUTKfU7Ug42';
     }
+    match /sessions/{uid} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == uid;
+    }
   }
 }
 ```
