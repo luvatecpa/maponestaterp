@@ -148,6 +148,7 @@
     <div id="modal">
       <h3 id="modal-title">Nuevo grafiti</h3>
       <div><label>Nombre</label><input type="text" id="inp-name" placeholder="Ej: Grafiti Zona Centro" maxlength="80"></div>
+      <div><label>Descripci&oacute;n</label><textarea id="inp-desc" placeholder="Descripci&oacute;n del lugar, c&oacute;mo llegar..." maxlength="300" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;outline:none;resize:vertical;min-height:60px;font-family:inherit"></textarea></div>
       <div>
         <label>Imagen (captura del lugar)</label>
         <input type="file" id="inp-image" accept="image/*">
@@ -235,21 +236,21 @@
       var allData = [];    // { id, x, y, nombre, imagen }
       var editingId = null; // current edit ID
 
-      function buildTooltipHTML(spot) {
-        var h = '<div class="tt-content">';
-        if (spot.imagen) {
-          h += '<img src="'+escapeHTML(spot.imagen)+'" alt="'+escapeHTML(spot.nombre)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">';
-          h += '<div class="tt-noimg" style="display:none">Sin imagen</div>';
-        } else {
-          h += '<div class="tt-noimg">Sin imagen a&uacute;n</div>';
-        }
-        h += '<div class="tt-name">'+escapeHTML(spot.nombre||'Sin nombre')+'</div>';
-        if (isAdmin) {
-          h += '<div class="tt-actions"><button class="tt-btn" onclick="event.stopPropagation();editGraffiti(\''+spot.id+'\')">Editar</button><button class="tt-btn del" onclick="event.stopPropagation();deleteGraffiti(\''+spot.id+'\')">Eliminar</button></div>';
-        }
-        h += '</div>';
-        return h;
-      }
+       function buildTooltipHTML(spot) {
+         var h = '<div class="tt-content">';
+         if (spot.imagen) {
+           h += '<img src="'+escapeHTML(spot.imagen)+'" alt="'+escapeHTML(spot.nombre)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">';
+           h += '<div class="tt-noimg" style="display:none">Sin imagen</div>';
+         } else {
+           h += '<div class="tt-noimg">Sin imagen a&uacute;n</div>';
+         }
+         h += '<div class="tt-name">'+escapeHTML(spot.nombre||'Sin nombre')+'</div>';
+         if (spot.descripcion) {
+           h += '<div style="font-size:11px;color:#aaa;margin-top:4px;line-height:1.3">'+escapeHTML(spot.descripcion)+'</div>';
+         }
+         h += '</div>';
+         return h;
+       }
 
       function escapeHTML(str) {
         var d = document.createElement('div');
@@ -267,12 +268,22 @@
             className:'graffiti-tooltip', interactive:true
           });
 
-          var popupHTML = '<div style="text-align:center;min-width:200px;"><strong>'+escapeHTML(spot.nombre||'Sin nombre')+'</strong>';
+          var popupHTML = '<div style="min-width:220px;text-align:center;">';
+          popupHTML += '<strong>'+escapeHTML(spot.nombre||'Sin nombre')+'</strong>';
           if (spot.imagen) {
             popupHTML += '<br><img src="'+escapeHTML(spot.imagen)+'" style="max-width:260px;max-height:200px;border-radius:8px;margin-top:6px" onerror="this.style.display=\'none\'">';
           }
+          if (spot.descripcion) {
+            popupHTML += '<div style="font-size:12px;color:#aaa;margin-top:8px;line-height:1.4;text-align:left">'+escapeHTML(spot.descripcion)+'</div>';
+          }
+          if (isAdmin) {
+            popupHTML += '<div style="margin-top:10px;display:flex;gap:8px;justify-content:center">';
+            popupHTML += '<button onclick="var e=arguments[0]||window.event;e.stopPropagation();editGraffiti(\''+spot.id+'\')" style="background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer">Editar</button>';
+            popupHTML += '<button onclick="var e=arguments[0]||window.event;e.stopPropagation();deleteGraffiti(\''+spot.id+'\');map.closePopup()" style="background:rgba(231,76,60,.2);color:#e74c3c;border:1px solid rgba(231,76,60,.4);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer">Eliminar</button>';
+            popupHTML += '</div>';
+          }
           popupHTML += '</div>';
-          marker.bindPopup(popupHTML, {className:'graffiti-tooltip',closeButton:false});
+          marker.bindPopup(popupHTML, {className:'graffiti-tooltip',closeButton:true});
 
           marker.on('mouseover', function(){ this.setIcon(hoverIcon); });
           marker.on('mouseout', function(){ this.setIcon(normalIcon); });
@@ -299,7 +310,7 @@
           allData = [];
           snap.forEach(function(doc){
             var d = doc.data();
-            allData.push({id:doc.id, x:d.x, y:d.y, nombre:d.nombre, imagen:d.imagen||''});
+            allData.push({id:doc.id, x:d.x, y:d.y, nombre:d.nombre, descripcion:d.descripcion||'', imagen:d.imagen||''});
           });
           renderMarkers();
         }, function(err){
@@ -312,7 +323,7 @@
 
       function loadLocalData() {
         allData = (window.GRAFFITI || []).map(function(d,i){
-          return {id:'local_'+i, x:d.x, y:d.y, nombre:d.nombre, imagen:d.imagen||''};
+          return {id:'local_'+i, x:d.x, y:d.y, nombre:d.nombre, descripcion:d.descripcion||'', imagen:d.imagen||''};
         });
         renderMarkers();
         if (!firestoreAvailable) {
@@ -334,6 +345,7 @@
         editingId = id || null;
         var title = document.getElementById('modal-title');
         var nameInp = document.getElementById('inp-name');
+        var descInp = document.getElementById('inp-desc');
         var fileInp = document.getElementById('inp-image');
         var preview = document.getElementById('img-preview');
         var coords = document.getElementById('modal-coords');
@@ -349,6 +361,7 @@
           var spot = allData.find(function(s){return s.id===id});
           if (spot) {
             nameInp.value = spot.nombre || '';
+            descInp.value = spot.descripcion || '';
             coords.textContent = 'x: '+spot.x+'  |  y: '+spot.y;
             if (spot.imagen) {
               preview.src = spot.imagen;
@@ -359,6 +372,7 @@
         } else {
           title.textContent = 'Nuevo grafiti';
           nameInp.value = '';
+          descInp.value = '';
           coords.textContent = 'x: '+x+'  |  y: '+y;
           delBtn.style.display = 'none';
         }
@@ -419,6 +433,7 @@
         var name = document.getElementById('inp-name').value.trim();
         if (!name) { toast('Escribe un nombre', 'error'); return; }
 
+        var desc = document.getElementById('inp-desc').value.trim();
         var fileInp = document.getElementById('inp-image');
         var file = fileInp.files[0];
 
@@ -440,6 +455,7 @@
             x: editingId && spot ? spot.x : window._modalX,
             y: editingId && spot ? spot.y : window._modalY,
             nombre: name,
+            descripcion: desc,
             imagen: imagenData,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           };
@@ -455,9 +471,9 @@
             // Local mode
             if (editingId) {
               var idx = allData.findIndex(function(s){return s.id===editingId});
-              if (idx>=0) { allData[idx].nombre=name; allData[idx].imagen=imagenData; }
+              if (idx>=0) { allData[idx].nombre=name; allData[idx].descripcion=desc; allData[idx].imagen=imagenData; }
             } else {
-              allData.push({id:'local_'+Date.now(), x:window._modalX, y:window._modalY, nombre:name, imagen:imagenData});
+              allData.push({id:'local_'+Date.now(), x:window._modalX, y:window._modalY, nombre:name, descripcion:desc, imagen:imagenData});
             }
             renderMarkers();
           }
