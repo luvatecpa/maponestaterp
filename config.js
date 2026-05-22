@@ -1,12 +1,12 @@
 window.APP_CONFIG = {
   // --- Firebase (obten estos datos en console.firebase.google.com) ---
   firebase: {
-    apiKey: "TU_API_KEY",
-    authDomain: "TU_PROYECTO.firebaseapp.com",
-    projectId: "TU_PROYECTO",
-    storageBucket: "TU_PROYECTO.appspot.com",
-    messagingSenderId: "000000000000",
-    appId: "TU_APP_ID"
+    apiKey: "AIzaSyAXULYyliSZgY4yd480VzFb51FOYFO3vqc",
+    authDomain: "maponestaterp.firebaseapp.com",
+    projectId: "maponestaterp",
+    storageBucket: "maponestaterp.firebasestorage.app",
+    messagingSenderId: "1052199704746",
+    appId: "1:1052199704746:web:ab5c625c70912f19ca98d3"
   },
 
   // --- Clave de administrador ---
