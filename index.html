@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>OneState RP — Mapa de Grafitis</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0a;font-family:'Segoe UI',system-ui,sans-serif}
+    #map{width:100%;height:100%;background:#111}
+
+    /* Toast */
+    #toast{
+      position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;
+      background:rgba(10,10,10,0.95);color:#fff;border:1px solid rgba(255,255,255,0.2);
+      border-radius:10px;padding:10px 20px;font-size:13px;
+      opacity:0;transition:opacity .25s;pointer-events:none
+    }
+    #toast.show{opacity:1}
+    #toast.success{border-color:#2ecc71}
+    #toast.error{border-color:#e74c3c}
+
+    /* Top controls */
+    #controls{
+      position:fixed;top:16px;right:16px;z-index:1000;
+      display:flex;flex-direction:column;gap:8px
+    }
+    .btn{
+      background:rgba(10,10,10,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+      color:#fff;border:1px solid rgba(255,255,255,.15);
+      border-radius:8px;padding:10px 16px;font-size:14px;
+      cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;user-select:none
+    }
+    .btn:hover{background:rgba(30,30,30,.9);border-color:rgba(255,255,255,.3)}
+    .btn.admin{background:rgba(192,57,43,.85);border-color:rgba(192,57,43,.5)}
+    .btn.admin:hover{background:rgba(231,76,60,.9)}
+
+    #info-bar{
+      position:fixed;bottom:24px;left:24px;z-index:1000;
+      background:rgba(10,10,10,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+      color:#fff;border:1px solid rgba(255,255,255,.15);
+      border-radius:8px;padding:10px 16px;font-size:13px;display:flex;gap:16px
+    }
+    #info-bar .dot{display:flex;align-items:center;gap:6px}
+    .gradot{width:12px;height:12px;background:#e74c3c;border:2px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(231,76,60,.5);flex-shrink:0}
+
+    /* Loading spinner */
+    #loading{
+      position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2000;
+      background:rgba(10,10,10,.9);border-radius:12px;padding:20px 30px;color:#fff;font-size:14px;
+      display:none;align-items:center;gap:10px
+    }
+    #loading.show{display:flex}
+    .spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Modal overlay */
+    #modal-overlay{
+      position:fixed;inset:0;z-index:2001;background:rgba(0,0,0,.6);
+      display:none;align-items:center;justify-content:center
+    }
+    #modal-overlay.show{display:flex}
+    #modal{
+      background:#1a1a1a;border:1px solid rgba(255,255,255,.15);border-radius:14px;
+      padding:24px;width:90%;max-width:420px;color:#fff;display:flex;flex-direction:column;gap:14px;
+      box-shadow:0 12px 40px rgba(0,0,0,.6)
+    }
+    #modal h3{margin:0;font-size:18px}
+    #modal label{font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.5px}
+    #modal input[type=text],#modal input[type=file]{
+      width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+      border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;outline:none
+    }
+    #modal input[type=text]:focus{border-color:rgba(255,255,255,.3)}
+    #modal input[type=file]{padding:8px;cursor:pointer}
+    #img-preview{width:100%;max-height:160px;object-fit:contain;border-radius:8px;background:#111;display:none}
+    #img-preview.has-img{display:block}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end}
+    .btn-save{
+      background:#2ecc71;color:#000;border:none;border-radius:8px;
+      padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer
+    }
+    .btn-save:hover{background:#27ae60}
+    .btn-save:disabled{opacity:.5;cursor:not-allowed}
+    .btn-cancel{
+      background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);
+      border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer
+    }
+    .btn-delete{
+      background:#c0392b;color:#fff;border:none;border-radius:8px;
+      padding:10px 20px;font-size:14px;cursor:pointer;margin-right:auto
+    }
+    .btn-delete:hover{background:#e74c3c}
+
+    /* Marker styles */
+    .graffiti-tooltip{
+      background:rgba(10,10,10,.93)!important;border:1px solid rgba(255,255,255,.2)!important;
+      border-radius:10px!important;padding:0!important;color:#fff!important;
+      box-shadow:0 6px 24px rgba(0,0,0,.6)!important;overflow:hidden;font-size:13px
+    }
+    .graffiti-tooltip::before{display:none!important}
+    .tt-content{padding:10px;min-width:180px}
+    .tt-content img{width:100%;height:120px;object-fit:cover;border-radius:6px;background:#1a1a1a;display:block}
+    .tt-content .tt-noimg{
+      width:100%;height:60px;background:#1a1a1a;border-radius:6px;
+      display:flex;align-items:center;justify-content:center;color:#555;font-size:12px
+    }
+    .tt-content .tt-name{margin-top:8px;font-size:13px;font-weight:600}
+    .tt-content .tt-actions{display:flex;gap:6px;margin-top:6px}
+    .tt-content .tt-btn{
+      background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:4px;
+      padding:3px 8px;font-size:11px;cursor:pointer
+    }
+    .tt-content .tt-btn.del{color:#e74c3c}
+    .tt-content .tt-btn:hover{background:rgba(255,255,255,.2)}
+
+    .graffiti-marker{
+      width:16px;height:16px;background:#e74c3c;border:2px solid #fff;
+      border-radius:50%;box-shadow:0 0 8px rgba(231,76,60,.55);
+      cursor:pointer;transition:transform .15s,box-shadow .15s
+    }
+    .graffiti-marker:hover{transform:scale(1.5);box-shadow:0 0 16px rgba(231,76,60,.9)}
+
+    .leaflet-control-attribution{display:none!important}
+
+    @media(max-width:600px){
+      #controls{top:8px;right:8px}.btn{padding:8px 12px;font-size:12px}
+      #info-bar{bottom:12px;left:12px;font-size:12px}
+      #modal{width:95%;padding:16px}
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="toast"></div>
+  <div id="loading"><div class="spinner"></div> Procesando...</div>
+
+  <div id="controls">
+    <button class="btn" id="btn-center" onclick="centerMap()">&#8634; Centrar mapa</button>
+  </div>
+
+  <div id="info-bar">
+    <div class="dot"><div class="gradot"></div> <span id="total-label">Cargando...</span></div>
+  </div>
+
+  <div id="modal-overlay">
+    <div id="modal">
+      <h3 id="modal-title">Nuevo grafiti</h3>
+      <div><label>Nombre</label><input type="text" id="inp-name" placeholder="Ej: Grafiti Zona Centro" maxlength="80"></div>
+      <div>
+        <label>Imagen (captura del lugar)</label>
+        <input type="file" id="inp-image" accept="image/*">
+        <img id="img-preview" alt="Vista previa">
+      </div>
+      <p style="font-size:11px;color:#888;margin:0" id="modal-coords"></p>
+      <div class="modal-actions">
+        <button class="btn-delete" id="btn-delete" style="display:none" onclick="deleteGraffiti()">Eliminar</button>
+        <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="btn-save" id="btn-save" onclick="saveGraffiti()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <!-- Config y datos locales -->
+  <script src="config.js"></script>
+  <script src="data.js"></script>
+
+  <script>
+    (function(){
+      var cfg = window.APP_CONFIG || {};
+      var IMG_W = (cfg.map && cfg.map.imageWidth) || 5120;
+      var IMG_H = (cfg.map && cfg.map.imageHeight) || 5120;
+      var IMG_URL = (cfg.map && cfg.map.imageUrl) || 'map.jpg';
+      var MIN_ZOOM = (cfg.map && cfg.map.minZoom) || -2;
+      var MAX_ZOOM = (cfg.map && cfg.map.maxZoom) || 3;
+
+      var adminKey = cfg.adminKey || 'grafiti2025';
+      var params = new URLSearchParams(window.location.search);
+      var isAdmin = params.get('admin') === adminKey;
+
+      var fbReady = false;
+      var db = null;
+      var firestoreAvailable = false;
+
+      // Check if Firebase config is filled in
+      if (cfg.firebase && cfg.firebase.apiKey && cfg.firebase.apiKey !== 'TU_API_KEY') {
+        try {
+          firebase.initializeApp(cfg.firebase);
+          db = firebase.firestore();
+          firestoreAvailable = true;
+        } catch(e) {
+          console.warn('Firebase init error:', e.message);
+        }
+      }
+
+      var bounds = [[0,0],[IMG_H,IMG_W]];
+
+      window.map = L.map('map', {
+        crs: L.CRS.Simple,
+        minZoom: MIN_ZOOM,
+        maxZoom: MAX_ZOOM,
+        zoomControl: true,
+        attributionControl: false
+      });
+
+      L.imageOverlay(IMG_URL, bounds).addTo(map);
+      map.fitBounds(bounds);
+      map.setMaxBounds(bounds);
+
+      var markerIcon = L.divIcon({
+        className: 'graffiti-marker',
+        iconSize: [16,16],
+        iconAnchor: [8,8]
+      });
+
+      // --- Marker layer ---
+      var markerLayer = L.layerGroup().addTo(map);
+      var allData = [];    // { id, x, y, nombre, imagen }
+      var editingId = null; // current edit ID
+
+      function buildTooltipHTML(spot) {
+        var h = '<div class="tt-content">';
+        if (spot.imagen) {
+          h += '<img src="'+escapeHTML(spot.imagen)+'" alt="'+escapeHTML(spot.nombre)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">';
+          h += '<div class="tt-noimg" style="display:none">Sin imagen</div>';
+        } else {
+          h += '<div class="tt-noimg">Sin imagen a&uacute;n</div>';
+        }
+        h += '<div class="tt-name">'+escapeHTML(spot.nombre||'Sin nombre')+'</div>';
+        if (isAdmin) {
+          h += '<div class="tt-actions"><button class="tt-btn" onclick="event.stopPropagation();editGraffiti(\''+spot.id+'\')">Editar</button><button class="tt-btn del" onclick="event.stopPropagation();deleteGraffiti(\''+spot.id+'\')">Eliminar</button></div>';
+        }
+        h += '</div>';
+        return h;
+      }
+
+      function escapeHTML(str) {
+        var d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+      }
+
+      function renderMarkers() {
+        markerLayer.clearLayers();
+        allData.forEach(function(spot){
+          var marker = L.marker([spot.y, spot.x], {icon:markerIcon}).addTo(markerLayer);
+          marker.bindTooltip(buildTooltipHTML(spot), {
+            direction:'top', offset:[0,-12],
+            className:'graffiti-tooltip', interactive:true
+          });
+          marker.on('click', function(){
+            var popup = '<div style="text-align:center;min-width:200px;"><strong>'+escapeHTML(spot.nombre||'Sin nombre')+'</strong>';
+            if (spot.imagen) {
+              popup += '<br><img src="'+escapeHTML(spot.imagen)+'" style="max-width:260px;max-height:200px;border-radius:8px;margin-top:6px" onerror="this.style.display=\'none\'">';
+            }
+            popup += '</div>';
+            marker.bindPopup(popup, {className:'graffiti-tooltip',closeButton:false}).openPopup();
+          });
+        });
+        document.getElementById('total-label').textContent = allData.length + ' grafitis';
+      }
+
+      function toast(msg, type) {
+        var el = document.getElementById('toast');
+        el.textContent = msg;
+        el.className = (type||'') + ' show';
+        clearTimeout(el._tid);
+        el._tid = setTimeout(function(){el.classList.remove('show')}, 2500);
+      }
+
+      function showLoading() { document.getElementById('loading').classList.add('show'); }
+      function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+
+      // --- Load data ---
+      if (firestoreAvailable) {
+        db.collection('graffiti').orderBy('createdAt','desc').onSnapshot(function(snap){
+          allData = [];
+          snap.forEach(function(doc){
+            var d = doc.data();
+            allData.push({id:doc.id, x:d.x, y:d.y, nombre:d.nombre, imagen:d.imagen||''});
+          });
+          renderMarkers();
+        }, function(err){
+          console.warn('Firestore error, usando datos locales:', err.message);
+          loadLocalData();
+        });
+      } else {
+        loadLocalData();
+      }
+
+      function loadLocalData() {
+        allData = (window.GRAFFITI || []).map(function(d,i){
+          return {id:'local_'+i, x:d.x, y:d.y, nombre:d.nombre, imagen:d.imagen||''};
+        });
+        renderMarkers();
+        if (!firestoreAvailable) {
+          document.getElementById('info-bar').insertAdjacentHTML('beforeend',
+            '<span style="color:#888;font-size:11px" title="Configura Firebase en config.js para guardar online">offline</span>');
+        }
+      }
+
+      // --- Admin: add/edit via map click ---
+      map.on('click', function(e){
+        if (!isAdmin) return;
+        var x = Math.round(e.latlng.lng);
+        var y = Math.round(e.latlng.lat);
+        openModal(null, x, y);
+      });
+
+      // --- Modal ---
+      function openModal(id, x, y) {
+        editingId = id || null;
+        var title = document.getElementById('modal-title');
+        var nameInp = document.getElementById('inp-name');
+        var fileInp = document.getElementById('inp-image');
+        var preview = document.getElementById('img-preview');
+        var coords = document.getElementById('modal-coords');
+        var delBtn = document.getElementById('btn-delete');
+        var saveBtn = document.getElementById('btn-save');
+
+        preview.classList.remove('has-img');
+        preview.src = '';
+        fileInp.value = '';
+
+        if (id) {
+          title.textContent = 'Editar grafiti';
+          var spot = allData.find(function(s){return s.id===id});
+          if (spot) {
+            nameInp.value = spot.nombre || '';
+            coords.textContent = 'x: '+spot.x+'  |  y: '+spot.y;
+            if (spot.imagen) {
+              preview.src = spot.imagen;
+              preview.classList.add('has-img');
+            }
+            delBtn.style.display = '';
+          }
+        } else {
+          title.textContent = 'Nuevo grafiti';
+          nameInp.value = '';
+          coords.textContent = 'x: '+x+'  |  y: '+y;
+          delBtn.style.display = 'none';
+        }
+
+        editingId = id;
+        window._modalX = x;
+        window._modalY = y;
+        document.getElementById('modal-overlay').classList.add('show');
+      }
+
+      window.closeModal = function(){
+        document.getElementById('modal-overlay').classList.remove('show');
+        editingId = null;
+      };
+
+      // Preview image on select
+      document.getElementById('inp-image').addEventListener('change', function(e){
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(ev){
+          document.getElementById('img-preview').src = ev.target.result;
+          document.getElementById('img-preview').classList.add('has-img');
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // --- Resize image client-side before storing ---
+      function resizeImage(file, maxW, maxH) {
+        return new Promise(function(resolve, reject){
+          var reader = new FileReader();
+          reader.onload = function(e){
+            var img = new Image();
+            img.onload = function(){
+              var w = img.width, h = img.height;
+              if (w <= maxW && h <= maxH) {
+                resolve(e.target.result);
+                return;
+              }
+              var ratio = Math.min(maxW/w, maxH/h);
+              var nw = Math.round(w*ratio), nh = Math.round(h*ratio);
+              var canvas = document.createElement('canvas');
+              canvas.width = nw; canvas.height = nh;
+              var ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, nw, nh);
+              resolve(canvas.toDataURL('image/jpeg', 0.75));
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // --- Save ---
+      window.saveGraffiti = async function(){
+        var name = document.getElementById('inp-name').value.trim();
+        if (!name) { toast('Escribe un nombre', 'error'); return; }
+
+        var fileInp = document.getElementById('inp-image');
+        var file = fileInp.files[0];
+
+        var saveBtn = document.getElementById('btn-save');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Guardando...';
+        showLoading();
+
+        try {
+          var imagenData = '';
+          var spot = editingId ? allData.find(function(s){return s.id===editingId}) : null;
+          if (file) {
+            imagenData = await resizeImage(file, 800, 600);
+          } else if (spot && spot.imagen) {
+            imagenData = spot.imagen; // keep existing
+          }
+
+          var docData = {
+            x: editingId && spot ? spot.x : window._modalX,
+            y: editingId && spot ? spot.y : window._modalY,
+            nombre: name,
+            imagen: imagenData,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+
+          if (firestoreAvailable) {
+            if (editingId) {
+              await db.collection('graffiti').doc(editingId).update(docData);
+            } else {
+              docData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+              await db.collection('graffiti').add(docData);
+            }
+          } else {
+            // Local mode
+            if (editingId) {
+              var idx = allData.findIndex(function(s){return s.id===editingId});
+              if (idx>=0) { allData[idx].nombre=name; allData[idx].imagen=imagenData; }
+            } else {
+              allData.push({id:'local_'+Date.now(), x:window._modalX, y:window._modalY, nombre:name, imagen:imagenData});
+            }
+            renderMarkers();
+          }
+
+          closeModal();
+          toast(editingId ? 'Grafiti actualizado' : 'Grafiti agregado', 'success');
+        } catch(e) {
+          toast('Error: '+e.message, 'error');
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Guardar';
+          hideLoading();
+        }
+      };
+
+      // --- Edit ---
+      window.editGraffiti = function(id) {
+        var spot = allData.find(function(s){return s.id===id});
+        if (!spot) return;
+        openModal(id, spot.x, spot.y);
+      };
+
+      // --- Delete ---
+      window.deleteGraffiti = function(id) {
+        if (!id) id = editingId;
+        if (!id) return;
+        if (!confirm('Eliminar este grafiti?')) return;
+
+        showLoading();
+        var promise;
+        if (firestoreAvailable) {
+          promise = db.collection('graffiti').doc(id).delete();
+        } else {
+          promise = Promise.resolve();
+          allData = allData.filter(function(s){return s.id!==id});
+          renderMarkers();
+        }
+
+        promise.then(function(){
+          closeModal();
+          toast('Grafiti eliminado', 'success');
+          hideLoading();
+        }).catch(function(e){
+          toast('Error: '+e.message, 'error');
+          hideLoading();
+        });
+      };
+
+      // --- Center map ---
+      window.centerMap = function(){ map.fitBounds(bounds); };
+
+      // --- Admin UI tweaks ---
+      if (isAdmin) {
+        document.getElementById('controls').insertAdjacentHTML('afterbegin',
+          '<button class="btn admin" onclick="toggleAdminInfo()">&#128736; Admin activo</button>');
+        map.getContainer().style.cursor = 'crosshair';
+        toast('Modo administrador activo — haz click en el mapa para agregar puntos', 'success');
+      }
+
+      window.toggleAdminInfo = function(){
+        toast('Admin activo. Click en mapa = nuevo punto. Click en marcador = editar/eliminar.');
+      };
+
+      // Close modal on overlay click
+      document.getElementById('modal-overlay').addEventListener('click', function(e){
+        if (e.target === this) closeModal();
+      });
+    })();
+  </script>
+</body>
+</html>
