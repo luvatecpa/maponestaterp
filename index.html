@@ -23,11 +23,17 @@
 
     /* Login screen */
     #login-screen{
-      position:fixed;inset:0;z-index:10000;background:#0a0a0a;
+      position:fixed;inset:0;z-index:10000;
+      background:url('map.jpg') center/cover no-repeat;
       display:flex;align-items:center;justify-content:center
+    }
+    #login-screen::before{
+      content:'';position:absolute;inset:0;
+      background:rgba(0,0,0,.75);z-index:0
     }
     #login-screen.hidden{display:none}
     .login-box{
+      position:relative;z-index:1;
       background:#1a1a1a;border:1px solid rgba(255,255,255,.12);border-radius:16px;
       padding:44px 36px;width:90%;max-width:370px;text-align:center;color:#fff
     }
