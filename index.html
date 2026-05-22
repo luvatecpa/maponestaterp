@@ -178,11 +178,11 @@
   <!-- ======== LOGIN SCREEN ======== -->
   <div id="login-screen">
     <div class="login-box">
-      <h2>OneState RP</h2>
-      <p class="sub">Mapa de Grafitis — Acceso restringido</p>
+      <h2>MAPA GRAFITIS OSRP</h2>
+      <p class="sub">CREADO POR: LUVATEC</p>
       <input type="email" id="login-email" placeholder="Email" autocomplete="email">
       <input type="password" id="login-password" placeholder="Contraseña" autocomplete="current-password">
-      <button class="btn-login" id="login-btn" onclick="doLogin()">Entrar</button>
+      <button class="btn-login" id="login-btn" onclick="doLogin()">LOGIN</button>
       <div class="login-error" id="login-error"></div>
     </div>
   </div>
@@ -300,7 +300,7 @@
         }
 
         btn.disabled = true;
-        btn.textContent = 'Entrando...';
+        btn.textContent = 'Ingresando...';
         err.classList.remove('show');
 
         auth.signInWithEmailAndPassword(email, pass).catch(function(e){
