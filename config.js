@@ -11,7 +11,9 @@ window.APP_CONFIG = {
 
   // --- Clave de administrador ---
   // Accede con: https://tusitio.com/?admin=ESTA_CLAVE
+  // O simplemente inicia sesion con tu cuenta (admin por UID)
   adminKey: "grafiti2025",
+  adminUID: "feT0EwBBA6VwFyJC3lUTKfU7Ug42",
 
   // --- Mapa ---
   map: {

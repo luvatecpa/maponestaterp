@@ -21,6 +21,36 @@
     #toast.success{border-color:#2ecc71}
     #toast.error{border-color:#e74c3c}
 
+    /* Login screen */
+    #login-screen{
+      position:fixed;inset:0;z-index:10000;background:#0a0a0a;
+      display:flex;align-items:center;justify-content:center
+    }
+    #login-screen.hidden{display:none}
+    .login-box{
+      background:#1a1a1a;border:1px solid rgba(255,255,255,.12);border-radius:16px;
+      padding:44px 36px;width:90%;max-width:370px;text-align:center;color:#fff
+    }
+    .login-box h2{margin:0 0 4px;font-size:24px;color:#fff}
+    .login-box .sub{margin:0 0 30px;color:#888;font-size:13px}
+    .login-box input{
+      width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+      border-radius:8px;padding:12px 14px;color:#fff;font-size:14px;margin-bottom:10px;outline:none
+    }
+    .login-box input:focus{border-color:rgba(255,255,255,.3)}
+    .login-box .btn-login{
+      width:100%;background:#2ecc71;color:#000;border:none;border-radius:8px;
+      padding:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px
+    }
+    .login-box .btn-login:hover{background:#27ae60}
+    .login-box .btn-login:disabled{opacity:.5;cursor:not-allowed}
+    .login-error{color:#e74c3c;font-size:12px;margin-top:12px;display:none}
+    .login-error.show{display:block}
+
+    /* App content */
+    #app-content{display:none}
+    #app-content.visible{display:block}
+
     /* Top controls */
     #controls{
       position:fixed;top:16px;right:16px;z-index:1000;
@@ -35,12 +65,13 @@
     .btn:hover{background:rgba(30,30,30,.9);border-color:rgba(255,255,255,.3)}
     .btn.admin{background:rgba(192,57,43,.85);border-color:rgba(192,57,43,.5)}
     .btn.admin:hover{background:rgba(231,76,60,.9)}
+    .btn.logout{background:rgba(255,255,255,.08);font-size:12px;padding:8px 14px}
 
     #info-bar{
       position:fixed;bottom:24px;left:24px;z-index:1000;
       background:rgba(10,10,10,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
       color:#fff;border:1px solid rgba(255,255,255,.15);
-      border-radius:8px;padding:10px 16px;font-size:13px;display:flex;gap:16px
+      border-radius:8px;padding:10px 16px;font-size:13px;display:flex;gap:16px;align-items:center
     }
     #info-bar .dot{display:flex;align-items:center;gap:6px}
     .gradot{width:12px;height:12px;background:#e74c3c;border:2px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(231,76,60,.5);flex-shrink:0}
@@ -72,7 +103,12 @@
       width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
       border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;outline:none
     }
-    #modal input[type=text]:focus{border-color:rgba(255,255,255,.3)}
+    #modal input[type=text]:focus,#modal textarea:focus{border-color:rgba(255,255,255,.3)}
+    #modal textarea{
+      width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+      border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;outline:none;
+      resize:vertical;min-height:60px;font-family:inherit
+    }
     #modal input[type=file]{padding:8px;cursor:pointer}
     #img-preview{width:100%;max-height:160px;object-fit:contain;border-radius:8px;background:#111;display:none}
     #img-preview.has-img{display:block}
@@ -100,8 +136,6 @@
       box-shadow:0 6px 24px rgba(0,0,0,.6)!important;overflow:hidden;font-size:13px
     }
     .graffiti-tooltip::before{display:none!important}
-
-    /* Popup wrapper override */
     .graffiti-tooltip .leaflet-popup-content-wrapper{
       background:rgba(10,10,10,.93)!important;border:1px solid rgba(255,255,255,.2)!important;
       border-radius:10px!important;box-shadow:0 6px 24px rgba(0,0,0,.6)!important;color:#fff!important
@@ -112,7 +146,6 @@
     .graffiti-tooltip .leaflet-popup-content{margin:0!important;padding:12px 14px!important;min-width:200px}
     .graffiti-tooltip .leaflet-popup-content-wrapper .leaflet-popup-content img{border-radius:8px;margin-top:6px}
 
-    /* Tooltip content */
     .tt-content{padding:10px;min-width:180px}
     .tt-content img{width:100%;height:120px;object-fit:cover;border-radius:6px;background:#1a1a1a;display:block}
     .tt-content .tt-noimg{
@@ -121,7 +154,6 @@
     }
     .tt-content .tt-name{margin-top:8px;font-size:13px;font-weight:600}
 
-    /* Admin popup buttons */
     .popup-admin-btns{display:flex;gap:8px;justify-content:center;margin-top:10px}
     .popup-admin-btns button{
       background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);
@@ -137,37 +169,54 @@
       #controls{top:8px;right:8px}.btn{padding:8px 12px;font-size:12px}
       #info-bar{bottom:12px;left:12px;font-size:12px}
       #modal{width:95%;padding:16px}
+      .login-box{padding:32px 24px}
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
-  <div id="toast"></div>
-  <div id="loading"><div class="spinner"></div> Procesando...</div>
 
-  <div id="controls">
-    <button class="btn" id="btn-center" onclick="centerMap()">&#8634; Centrar mapa</button>
+  <!-- ======== LOGIN SCREEN ======== -->
+  <div id="login-screen">
+    <div class="login-box">
+      <h2>OneState RP</h2>
+      <p class="sub">Mapa de Grafitis — Acceso restringido</p>
+      <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+      <input type="password" id="login-password" placeholder="Contraseña" autocomplete="current-password">
+      <button class="btn-login" id="login-btn" onclick="doLogin()">Entrar</button>
+      <div class="login-error" id="login-error"></div>
+    </div>
   </div>
 
-  <div id="info-bar">
-    <div class="dot"><div class="gradot"></div> <span id="total-label">Cargando...</span></div>
-  </div>
+  <!-- ======== APP CONTENT (hidden until auth) ======== -->
+  <div id="app-content">
+    <div id="map"></div>
+    <div id="toast"></div>
+    <div id="loading"><div class="spinner"></div> Procesando...</div>
 
-  <div id="modal-overlay">
-    <div id="modal">
-      <h3 id="modal-title">Nuevo grafiti</h3>
-      <div><label>Nombre</label><input type="text" id="inp-name" placeholder="Ej: Grafiti Zona Centro" maxlength="80"></div>
-      <div><label>Descripci&oacute;n</label><textarea id="inp-desc" placeholder="Descripci&oacute;n del lugar, c&oacute;mo llegar..." maxlength="300" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;outline:none;resize:vertical;min-height:60px;font-family:inherit"></textarea></div>
-      <div>
-        <label>Imagen (captura del lugar)</label>
-        <input type="file" id="inp-image" accept="image/*">
-        <img id="img-preview" alt="Vista previa">
-      </div>
-      <p style="font-size:11px;color:#888;margin:0" id="modal-coords"></p>
-      <div class="modal-actions">
-        <button class="btn-delete" id="btn-delete" style="display:none" onclick="deleteGraffiti()">Eliminar</button>
-        <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
-        <button class="btn-save" id="btn-save" onclick="saveGraffiti()">Guardar</button>
+    <div id="controls">
+      <button class="btn" id="btn-center" onclick="centerMap()">&#8634; Centrar mapa</button>
+    </div>
+
+    <div id="info-bar">
+      <div class="dot"><div class="gradot"></div> <span id="total-label">Cargando...</span></div>
+    </div>
+
+    <div id="modal-overlay">
+      <div id="modal">
+        <h3 id="modal-title">Nuevo grafiti</h3>
+        <div><label>Nombre</label><input type="text" id="inp-name" placeholder="Ej: Grafiti Zona Centro" maxlength="80"></div>
+        <div><label>Descripci&oacute;n</label><textarea id="inp-desc" placeholder="Descripci&oacute;n del lugar, c&oacute;mo llegar..." maxlength="300"></textarea></div>
+        <div>
+          <label>Imagen (captura del lugar)</label>
+          <input type="file" id="inp-image" accept="image/*">
+          <img id="img-preview" alt="Vista previa">
+        </div>
+        <p style="font-size:11px;color:#888;margin:0" id="modal-coords"></p>
+        <div class="modal-actions">
+          <button class="btn-delete" id="btn-delete" style="display:none" onclick="deleteGraffiti()">Eliminar</button>
+          <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+          <button class="btn-save" id="btn-save" onclick="saveGraffiti()">Guardar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -178,6 +227,7 @@
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
   <!-- Config y datos locales -->
   <script src="config.js"></script>
@@ -191,75 +241,194 @@
       var IMG_URL = (cfg.map && cfg.map.imageUrl) || 'map.jpg';
       var MIN_ZOOM = (cfg.map && cfg.map.minZoom) || -2;
       var MAX_ZOOM = (cfg.map && cfg.map.maxZoom) || 3;
+      var ADMIN_UID = cfg.adminUID || '';
 
       var adminKey = cfg.adminKey || 'grafiti2025';
       var params = new URLSearchParams(window.location.search);
-      var isAdmin = params.get('admin') === adminKey;
-
-      var fbReady = false;
       var db = null;
       var firestoreAvailable = false;
+      var auth = null;
 
-      // Check if Firebase config is filled in
+      var currentUser = null;
+      var isAdmin = false;
+
+      // --- Init Firebase ---
       if (cfg.firebase && cfg.firebase.apiKey && cfg.firebase.apiKey !== 'TU_API_KEY') {
         try {
           firebase.initializeApp(cfg.firebase);
           db = firebase.firestore();
+          auth = firebase.auth();
           firestoreAvailable = true;
-        } catch(e) {
-          console.warn('Firebase init error:', e.message);
+        } catch(e) { console.warn('Firebase init error:', e.message); }
+      }
+
+      // --- Auth state listener ---
+      if (auth) {
+        auth.onAuthStateChanged(function(user){
+          if (user) {
+            currentUser = user;
+            isAdmin = (params.get('admin') === adminKey) || (user.uid === ADMIN_UID);
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-content').classList.add('visible');
+            initApp();
+          } else {
+            currentUser = null;
+            isAdmin = false;
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('app-content').classList.remove('visible');
+          }
+        });
+      } else {
+        // No Firebase Auth → show app directly with URL key admin
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-content').classList.add('visible');
+        isAdmin = params.get('admin') === adminKey;
+        initApp();
+      }
+
+      // --- Login function ---
+      window.doLogin = function(){
+        var email = document.getElementById('login-email').value.trim();
+        var pass = document.getElementById('login-password').value;
+        var btn = document.getElementById('login-btn');
+        var err = document.getElementById('login-error');
+
+        if (!email || !pass) {
+          err.textContent = 'Ingresa email y contraseña';
+          err.classList.add('show');
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Entrando...';
+        err.classList.remove('show');
+
+        auth.signInWithEmailAndPassword(email, pass).catch(function(e){
+          err.textContent = 'Email o contraseña incorrectos';
+          err.classList.add('show');
+          btn.disabled = false;
+          btn.textContent = 'Entrar';
+        });
+      };
+
+      // Allow Enter key to login
+      document.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' && !document.getElementById('login-screen').classList.contains('hidden')) {
+          doLogin();
+        }
+      });
+
+      // --- Logout ---
+      window.doLogout = function(){
+        if (auth) { auth.signOut(); }
+      };
+
+      // ========================
+      //    APP INITIALIZATION
+      // ========================
+      var map, markerLayer, normalIcon, hoverIcon;
+      var bounds, allData, editingId;
+
+      function initApp(){
+        // Prevent double init
+        if (map) return;
+
+        bounds = [[0,0],[IMG_H,IMG_W]];
+
+        map = L.map('map', {
+          crs: L.CRS.Simple,
+          minZoom: MIN_ZOOM,
+          maxZoom: MAX_ZOOM,
+          zoomControl: true,
+          attributionControl: false
+        });
+
+        L.imageOverlay(IMG_URL, bounds).addTo(map);
+        map.fitBounds(bounds);
+        map.setMaxBounds(bounds);
+
+        normalIcon = L.icon({
+          iconUrl: 'marker.png',
+          iconSize: [24, 28],
+          iconAnchor: [12, 28],
+          popupAnchor: [0, -28],
+          tooltipAnchor: [0, -22]
+        });
+        hoverIcon = L.icon({
+          iconUrl: 'marker-hover.png',
+          iconSize: [24, 28],
+          iconAnchor: [12, 28],
+          popupAnchor: [0, -28],
+          tooltipAnchor: [0, -22]
+        });
+
+        markerLayer = L.layerGroup().addTo(map);
+        allData = [];
+        editingId = null;
+
+        // --- Centrar mapa ---
+        window.centerMap = function(){ map.fitBounds(bounds); };
+
+        // --- Logout button ---
+        if (auth && currentUser) {
+          document.getElementById('controls').insertAdjacentHTML('afterbegin',
+            '<button class="btn logout" onclick="doLogout()">&#128682; Salir ('+escapeHTML(currentUser.email)+')</button>');
+        }
+
+        // --- Admin UI ---
+        if (isAdmin) {
+          document.getElementById('controls').insertAdjacentHTML('afterbegin',
+            '<button class="btn admin" onclick="toggleAdminInfo()">&#128736; Admin activo</button>');
+          map.getContainer().style.cursor = 'crosshair';
+          toast('Modo administrador — haz click en el mapa para agregar puntos', 'success');
+        }
+
+        // --- Click en mapa (admin) ---
+        map.on('click', function(e){
+          if (!isAdmin) return;
+          var x = Math.round(e.latlng.lng);
+          var y = Math.round(e.latlng.lat);
+          openModal(null, x, y);
+        });
+
+        // --- Image preview ---
+        document.getElementById('inp-image').addEventListener('change', function(e){
+          var file = e.target.files[0];
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function(ev){
+            document.getElementById('img-preview').src = ev.target.result;
+            document.getElementById('img-preview').classList.add('has-img');
+          };
+          reader.readAsDataURL(file);
+        });
+
+        // --- Close modal on overlay click ---
+        document.getElementById('modal-overlay').addEventListener('click', function(e){
+          if (e.target === this) closeModal();
+        });
+
+        // --- Load data ---
+        if (firestoreAvailable) {
+          db.collection('graffiti').orderBy('createdAt','desc').onSnapshot(function(snap){
+            allData = [];
+            snap.forEach(function(doc){
+              var d = doc.data();
+              allData.push({id:doc.id, x:d.x, y:d.y, nombre:d.nombre, descripcion:d.descripcion||'', imagen:d.imagen||''});
+            });
+            renderMarkers();
+          }, function(err){
+            console.warn('Firestore error:', err.message);
+            loadLocalData();
+          });
+        } else {
+          loadLocalData();
         }
       }
 
-      var bounds = [[0,0],[IMG_H,IMG_W]];
-
-      window.map = L.map('map', {
-        crs: L.CRS.Simple,
-        minZoom: MIN_ZOOM,
-        maxZoom: MAX_ZOOM,
-        zoomControl: true,
-        attributionControl: false
-      });
-
-      L.imageOverlay(IMG_URL, bounds).addTo(map);
-      map.fitBounds(bounds);
-      map.setMaxBounds(bounds);
-
-       var normalIcon = L.icon({
-         iconUrl: 'marker.png',
-         iconSize: [24, 28],
-         iconAnchor: [12, 28],
-         popupAnchor: [0, -28],
-         tooltipAnchor: [0, -22]
-       });
-       var hoverIcon = L.icon({
-         iconUrl: 'marker-hover.png',
-         iconSize: [24, 28],
-         iconAnchor: [12, 28],
-         popupAnchor: [0, -28],
-         tooltipAnchor: [0, -22]
-       });
-
-      // --- Marker layer ---
-      var markerLayer = L.layerGroup().addTo(map);
-      var allData = [];    // { id, x, y, nombre, imagen }
-      var editingId = null; // current edit ID
-
-       function buildTooltipHTML(spot) {
-         var h = '<div class="tt-content">';
-         if (spot.imagen) {
-           h += '<img src="'+escapeHTML(spot.imagen)+'" alt="'+escapeHTML(spot.nombre)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">';
-           h += '<div class="tt-noimg" style="display:none">Sin imagen</div>';
-         } else {
-           h += '<div class="tt-noimg">Sin imagen a&uacute;n</div>';
-         }
-         h += '<div class="tt-name">'+escapeHTML(spot.nombre||'Sin nombre')+'</div>';
-         if (spot.descripcion) {
-           h += '<div style="font-size:11px;color:#aaa;margin-top:4px;line-height:1.3">'+escapeHTML(spot.descripcion)+'</div>';
-         }
-         h += '</div>';
-         return h;
-       }
+      // ========================
+      //    SHARED FUNCTIONS
+      // ========================
 
       function escapeHTML(str) {
         var d = document.createElement('div');
@@ -267,7 +436,34 @@
         return d.innerHTML;
       }
 
-       function renderMarkers() {
+      function toast(msg, type) {
+        var el = document.getElementById('toast');
+        el.textContent = msg;
+        el.className = (type||'') + ' show';
+        clearTimeout(el._tid);
+        el._tid = setTimeout(function(){el.classList.remove('show')}, 2500);
+      }
+
+      function showLoading() { document.getElementById('loading').classList.add('show'); }
+      function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+
+      function buildTooltipHTML(spot) {
+        var h = '<div class="tt-content">';
+        if (spot.imagen) {
+          h += '<img src="'+escapeHTML(spot.imagen)+'" alt="'+escapeHTML(spot.nombre)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">';
+          h += '<div class="tt-noimg" style="display:none">Sin imagen</div>';
+        } else {
+          h += '<div class="tt-noimg">Sin imagen a&uacute;n</div>';
+        }
+        h += '<div class="tt-name">'+escapeHTML(spot.nombre||'Sin nombre')+'</div>';
+        if (spot.descripcion) {
+          h += '<div style="font-size:11px;color:#aaa;margin-top:4px;line-height:1.3">'+escapeHTML(spot.descripcion)+'</div>';
+        }
+        h += '</div>';
+        return h;
+      }
+
+      function renderMarkers() {
         markerLayer.clearLayers();
         allData.forEach(function(spot){
           var marker = L.marker([spot.y, spot.x], {icon:normalIcon}).addTo(markerLayer);
@@ -302,52 +498,12 @@
         document.getElementById('total-label').textContent = allData.length + ' grafitis';
       }
 
-      function toast(msg, type) {
-        var el = document.getElementById('toast');
-        el.textContent = msg;
-        el.className = (type||'') + ' show';
-        clearTimeout(el._tid);
-        el._tid = setTimeout(function(){el.classList.remove('show')}, 2500);
-      }
-
-      function showLoading() { document.getElementById('loading').classList.add('show'); }
-      function hideLoading() { document.getElementById('loading').classList.remove('show'); }
-
-      // --- Load data ---
-      if (firestoreAvailable) {
-        db.collection('graffiti').orderBy('createdAt','desc').onSnapshot(function(snap){
-          allData = [];
-          snap.forEach(function(doc){
-            var d = doc.data();
-            allData.push({id:doc.id, x:d.x, y:d.y, nombre:d.nombre, descripcion:d.descripcion||'', imagen:d.imagen||''});
-          });
-          renderMarkers();
-        }, function(err){
-          console.warn('Firestore error, usando datos locales:', err.message);
-          loadLocalData();
-        });
-      } else {
-        loadLocalData();
-      }
-
       function loadLocalData() {
         allData = (window.GRAFFITI || []).map(function(d,i){
           return {id:'local_'+i, x:d.x, y:d.y, nombre:d.nombre, descripcion:d.descripcion||'', imagen:d.imagen||''};
         });
         renderMarkers();
-        if (!firestoreAvailable) {
-          document.getElementById('info-bar').insertAdjacentHTML('beforeend',
-            '<span style="color:#888;font-size:11px" title="Configura Firebase en config.js para guardar online">offline</span>');
-        }
       }
-
-      // --- Admin: add/edit via map click ---
-      map.on('click', function(e){
-        if (!isAdmin) return;
-        var x = Math.round(e.latlng.lng);
-        var y = Math.round(e.latlng.lat);
-        openModal(null, x, y);
-      });
 
       // --- Modal ---
       function openModal(id, x, y) {
@@ -359,7 +515,6 @@
         var preview = document.getElementById('img-preview');
         var coords = document.getElementById('modal-coords');
         var delBtn = document.getElementById('btn-delete');
-        var saveBtn = document.getElementById('btn-save');
 
         preview.classList.remove('has-img');
         preview.src = '';
@@ -397,115 +552,12 @@
         editingId = null;
       };
 
-      // Preview image on select
-      document.getElementById('inp-image').addEventListener('change', function(e){
-        var file = e.target.files[0];
-        if (!file) return;
-        var reader = new FileReader();
-        reader.onload = function(ev){
-          document.getElementById('img-preview').src = ev.target.result;
-          document.getElementById('img-preview').classList.add('has-img');
-        };
-        reader.readAsDataURL(file);
-      });
-
-      // --- Resize image client-side before storing ---
-      function resizeImage(file, maxW, maxH) {
-        return new Promise(function(resolve, reject){
-          var reader = new FileReader();
-          reader.onload = function(e){
-            var img = new Image();
-            img.onload = function(){
-              var w = img.width, h = img.height;
-              if (w <= maxW && h <= maxH) {
-                resolve(e.target.result);
-                return;
-              }
-              var ratio = Math.min(maxW/w, maxH/h);
-              var nw = Math.round(w*ratio), nh = Math.round(h*ratio);
-              var canvas = document.createElement('canvas');
-              canvas.width = nw; canvas.height = nh;
-              var ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0, nw, nh);
-              resolve(canvas.toDataURL('image/jpeg', 0.75));
-            };
-            img.onerror = reject;
-            img.src = e.target.result;
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      }
-
-      // --- Save ---
-      window.saveGraffiti = async function(){
-        var name = document.getElementById('inp-name').value.trim();
-        if (!name) { toast('Escribe un nombre', 'error'); return; }
-
-        var desc = document.getElementById('inp-desc').value.trim();
-        var fileInp = document.getElementById('inp-image');
-        var file = fileInp.files[0];
-
-        var saveBtn = document.getElementById('btn-save');
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Guardando...';
-        showLoading();
-
-        try {
-          var imagenData = '';
-          var spot = editingId ? allData.find(function(s){return s.id===editingId}) : null;
-          if (file) {
-            imagenData = await resizeImage(file, 800, 600);
-          } else if (spot && spot.imagen) {
-            imagenData = spot.imagen; // keep existing
-          }
-
-          var docData = {
-            x: editingId && spot ? spot.x : window._modalX,
-            y: editingId && spot ? spot.y : window._modalY,
-            nombre: name,
-            descripcion: desc,
-            imagen: imagenData,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          };
-
-          if (firestoreAvailable) {
-            if (editingId) {
-              await db.collection('graffiti').doc(editingId).update(docData);
-            } else {
-              docData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-              await db.collection('graffiti').add(docData);
-            }
-          } else {
-            // Local mode
-            if (editingId) {
-              var idx = allData.findIndex(function(s){return s.id===editingId});
-              if (idx>=0) { allData[idx].nombre=name; allData[idx].descripcion=desc; allData[idx].imagen=imagenData; }
-            } else {
-              allData.push({id:'local_'+Date.now(), x:window._modalX, y:window._modalY, nombre:name, descripcion:desc, imagen:imagenData});
-            }
-            renderMarkers();
-          }
-
-          closeModal();
-          toast(editingId ? 'Grafiti actualizado' : 'Grafiti agregado', 'success');
-        } catch(e) {
-          toast('Error: '+e.message, 'error');
-        } finally {
-          saveBtn.disabled = false;
-          saveBtn.textContent = 'Guardar';
-          hideLoading();
-        }
-      };
-
-      // --- Edit ---
       window.editGraffiti = function(id) {
         var spot = allData.find(function(s){return s.id===id});
         if (!spot) return;
         openModal(id, spot.x, spot.y);
       };
 
-      // --- Delete ---
       window.deleteGraffiti = function(id) {
         if (!id) id = editingId;
         if (!id) return;
@@ -531,25 +583,94 @@
         });
       };
 
-      // --- Center map ---
-      window.centerMap = function(){ map.fitBounds(bounds); };
-
-      // --- Admin UI tweaks ---
-      if (isAdmin) {
-        document.getElementById('controls').insertAdjacentHTML('afterbegin',
-          '<button class="btn admin" onclick="toggleAdminInfo()">&#128736; Admin activo</button>');
-        map.getContainer().style.cursor = 'crosshair';
-        toast('Modo administrador activo — haz click en el mapa para agregar puntos', 'success');
+      // --- Resize image ---
+      function resizeImage(file, maxW, maxH) {
+        return new Promise(function(resolve, reject){
+          var reader = new FileReader();
+          reader.onload = function(e){
+            var img = new Image();
+            img.onload = function(){
+              var w = img.width, h = img.height;
+              if (w <= maxW && h <= maxH) { resolve(e.target.result); return; }
+              var ratio = Math.min(maxW/w, maxH/h);
+              var nw = Math.round(w*ratio), nh = Math.round(h*ratio);
+              var canvas = document.createElement('canvas');
+              canvas.width = nw; canvas.height = nh;
+              var ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, nw, nh);
+              resolve(canvas.toDataURL('image/jpeg', 0.75));
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
       }
+
+      // --- Save ---
+      window.saveGraffiti = async function(){
+        var name = document.getElementById('inp-name').value.trim();
+        if (!name) { toast('Escribe un nombre', 'error'); return; }
+
+        var desc = document.getElementById('inp-desc').value.trim();
+        var fileInp = document.getElementById('inp-image');
+        var file = fileInp.files[0];
+        var saveBtn = document.getElementById('btn-save');
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Guardando...';
+        showLoading();
+
+        try {
+          var imagenData = '';
+          var spot = editingId ? allData.find(function(s){return s.id===editingId}) : null;
+          if (file) {
+            imagenData = await resizeImage(file, 800, 600);
+          } else if (spot && spot.imagen) {
+            imagenData = spot.imagen;
+          }
+
+          var docData = {
+            x: editingId && spot ? spot.x : window._modalX,
+            y: editingId && spot ? spot.y : window._modalY,
+            nombre: name,
+            descripcion: desc,
+            imagen: imagenData,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+
+          if (firestoreAvailable) {
+            if (editingId) {
+              await db.collection('graffiti').doc(editingId).update(docData);
+            } else {
+              docData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+              await db.collection('graffiti').add(docData);
+            }
+          } else {
+            if (editingId) {
+              var idx = allData.findIndex(function(s){return s.id===editingId});
+              if (idx>=0) { allData[idx].nombre=name; allData[idx].descripcion=desc; allData[idx].imagen=imagenData; }
+            } else {
+              allData.push({id:'local_'+Date.now(), x:window._modalX, y:window._modalY, nombre:name, descripcion:desc, imagen:imagenData});
+            }
+            renderMarkers();
+          }
+
+          closeModal();
+          toast(editingId ? 'Grafiti actualizado' : 'Grafiti agregado', 'success');
+        } catch(e) {
+          toast('Error: '+e.message, 'error');
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Guardar';
+          hideLoading();
+        }
+      };
 
       window.toggleAdminInfo = function(){
         toast('Admin activo. Click en mapa = nuevo punto. Click en marcador = editar/eliminar.');
       };
-
-      // Close modal on overlay click
-      document.getElementById('modal-overlay').addEventListener('click', function(e){
-        if (e.target === this) closeModal();
-      });
     })();
   </script>
 </body>
