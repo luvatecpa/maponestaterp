@@ -274,12 +274,41 @@
           if (user) {
             currentUser = user;
             isAdmin = (params.get('admin') === adminKey) || (user.uid === ADMIN_UID);
+
+            // Session management
+            if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
+            if (firestoreAvailable) {
+              sessionToken = 's_'+Date.now()+'_'+Math.random().toString(36).substr(2,9);
+              db.collection('sessions').doc(user.uid).set({
+                sessionToken: sessionToken,
+                lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+                email: user.email
+              }).catch(function(){});
+              sessionUnsub = db.collection('sessions').doc(user.uid).onSnapshot(function(doc){
+                if (!doc.exists || !doc.data().sessionToken) return;
+                if (doc.data().sessionToken !== sessionToken) {
+                  if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
+                  toast('Has iniciado sesion en otro dispositivo', 'error');
+                  setTimeout(function(){ if (auth) auth.signOut(); }, 600);
+                }
+              });
+            }
+
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app-content').classList.add('visible');
             initApp();
           } else {
             currentUser = null;
             isAdmin = false;
+            if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
+            sessionToken = null;
+
+            var loginBtn = document.getElementById('login-btn');
+            var loginErr = document.getElementById('login-error');
+            if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = 'ENTRAR'; }
+            if (loginErr) loginErr.classList.remove('show');
+            document.getElementById('login-password').value = '';
+
             document.getElementById('login-screen').classList.remove('hidden');
             document.getElementById('app-content').classList.remove('visible');
           }
@@ -340,9 +369,29 @@
       var bounds, allData, editingId;
       var sessionToken = null, sessionUnsub = null;
 
+      function refreshUI(){
+        var oldLogout = document.getElementById('btn-logout');
+        if (oldLogout) oldLogout.remove();
+        var oldAdminBtn = document.getElementById('btn-admin');
+        if (oldAdminBtn) oldAdminBtn.remove();
+
+        if (auth && currentUser) {
+          document.getElementById('controls').insertAdjacentHTML('afterbegin',
+            '<button class="btn logout" id="btn-logout" onclick="doLogout()">&#128682; Salir ('+escapeHTML(currentUser.email)+')</button>');
+        }
+
+        if (isAdmin) {
+          document.getElementById('controls').insertAdjacentHTML('afterbegin',
+            '<button class="btn admin" id="btn-admin" onclick="toggleAdminInfo()">&#128736; Admin activo</button>');
+          map.getContainer().style.cursor = 'crosshair';
+          toast('Modo administrador — haz click en el mapa para agregar puntos', 'success');
+        } else {
+          map.getContainer().style.cursor = '';
+        }
+      }
+
       function initApp(){
-        // Prevent double init
-        if (map) return;
+        if (map) { refreshUI(); return; }
 
         bounds = [[0,0],[IMG_H,IMG_W]];
 
@@ -377,43 +426,9 @@
         allData = [];
         editingId = null;
 
-        // --- Centrar mapa ---
         window.centerMap = function(){ map.fitBounds(bounds); };
 
-        // --- Logout button ---
-        if (auth && currentUser) {
-          document.getElementById('controls').insertAdjacentHTML('afterbegin',
-            '<button class="btn logout" onclick="doLogout()">&#128682; Salir ('+escapeHTML(currentUser.email)+')</button>');
-        }
-
-        // --- Admin UI ---
-        if (isAdmin) {
-          document.getElementById('controls').insertAdjacentHTML('afterbegin',
-            '<button class="btn admin" onclick="toggleAdminInfo()">&#128736; Admin activo</button>');
-          map.getContainer().style.cursor = 'crosshair';
-          toast('Modo administrador — haz click en el mapa para agregar puntos', 'success');
-        }
-
-        // --- Session management: 1 device limit ---
-        if (firestoreAvailable && currentUser) {
-          sessionToken = 's_'+Date.now()+'_'+Math.random().toString(36).substr(2,9);
-          db.collection('sessions').doc(currentUser.uid).set({
-            sessionToken: sessionToken,
-            lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-            email: currentUser.email
-          }).catch(function(){});
-
-          sessionUnsub = db.collection('sessions').doc(currentUser.uid).onSnapshot(function(doc){
-            if (!doc.exists || !doc.data().sessionToken) return;
-            if (doc.data().sessionToken !== sessionToken) {
-              if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
-              toast('Has iniciado sesion en otro dispositivo', 'error');
-              setTimeout(function(){
-                if (auth) auth.signOut();
-              }, 600);
-            }
-          });
-        }
+        refreshUI();
 
         // --- Click en mapa (admin) ---
         map.on('click', function(e){
