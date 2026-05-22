@@ -19,6 +19,6 @@ window.APP_CONFIG = {
     imageHeight: 5120,
     imageUrl: "map.jpg",
     minZoom: -2,
-    maxZoom: 2
+    maxZoom: 1
   }
 };
