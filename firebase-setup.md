@@ -14,30 +14,7 @@
 3. Pone el email y una contraseña temporal
 4. Repite para cada persona que quieras que tenga acceso (~20 personas)
 
-## 3. Activar Firebase Storage (para imagenes)
-
-1. Ve a **Build > Storage** en el menu izquierdo
-2. Click **Get started**
-3. Elige **Start in test mode** > Next
-4. Ubicacion: la misma de Firestore > **Done**
-
-5. Luego ve a la pestaña **Rules** de Storage y pega esto:
-
-```
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /graffiti/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow create, write, delete: if request.auth != null && request.auth.uid == 'feT0EwBBA6VwFyJC3lUTKfU7Ug42';
-    }
-  }
-}
-```
-
-6. Click **Publish**
-
-## 4. Actualizar reglas de seguridad de Firestore
+## 3. Actualizar reglas de seguridad de Firestore
 
 1. Ve a **Firestore Database > Rules**
 2. Borra todo y pega esto:
@@ -59,10 +36,9 @@ service cloud.firestore {
 
 3. Click **Publish**
 
-> Estas reglas significan:
+> Reglas:
 > - Solo usuarios autenticados pueden VER el mapa
 > - Solo TU uid (admin) puede CREAR/EDITAR/ELIMINAR grafitis
-> - Las imagenes son publicas solo para usuarios autenticados
 
 ## 4. Tu UID de admin
 
