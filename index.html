@@ -234,6 +234,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
   <!-- Config y datos locales -->
   <script src="config.js"></script>
@@ -252,6 +253,7 @@
       var adminKey = cfg.adminKey || 'grafiti2025';
       var params = new URLSearchParams(window.location.search);
       var db = null;
+      var storage = null;
       var firestoreAvailable = false;
       var auth = null;
 
@@ -263,6 +265,7 @@
         try {
           firebase.initializeApp(cfg.firebase);
           db = firebase.firestore();
+          storage = firebase.storage();
           auth = firebase.auth();
           firestoreAvailable = true;
         } catch(e) { console.warn('Firebase init error:', e.message); }
@@ -275,7 +278,7 @@
             currentUser = user;
             isAdmin = (params.get('admin') === adminKey) || (user.uid === ADMIN_UID);
 
-            // Session management
+            // Session management (listener starts AFTER write to avoid race condition)
             if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
             if (firestoreAvailable) {
               sessionToken = 's_'+Date.now()+'_'+Math.random().toString(36).substr(2,9);
@@ -283,15 +286,16 @@
                 sessionToken: sessionToken,
                 lastActive: firebase.firestore.FieldValue.serverTimestamp(),
                 email: user.email
+              }).then(function(){
+                sessionUnsub = db.collection('sessions').doc(user.uid).onSnapshot(function(doc){
+                  if (!doc.exists || !doc.data().sessionToken) return;
+                  if (doc.data().sessionToken !== sessionToken) {
+                    if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
+                    toast('Has iniciado sesion en otro dispositivo', 'error');
+                    setTimeout(function(){ if (auth) auth.signOut(); }, 600);
+                  }
+                });
               }).catch(function(){});
-              sessionUnsub = db.collection('sessions').doc(user.uid).onSnapshot(function(doc){
-                if (!doc.exists || !doc.data().sessionToken) return;
-                if (doc.data().sessionToken !== sessionToken) {
-                  if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
-                  toast('Has iniciado sesion en otro dispositivo', 'error');
-                  setTimeout(function(){ if (auth) auth.signOut(); }, 600);
-                }
-              });
             }
 
             subscribeData();
@@ -617,6 +621,13 @@
         if (!confirm('Eliminar este grafiti?')) return;
 
         showLoading();
+
+        // Also delete image from Storage if it's a Storage URL
+        var spot = allData.find(function(s){return s.id===id});
+        if (spot && spot.imagen && storage && spot.imagen.indexOf('firebasestorage') !== -1) {
+          try { storage.refFromURL(spot.imagen).delete(); } catch(ee) {}
+        }
+
         var promise;
         if (firestoreAvailable) {
           promise = db.collection('graffiti').doc(id).delete();
@@ -636,7 +647,7 @@
         });
       };
 
-      // --- Resize image ---
+      // --- Resize image (returns blob + dataURL) ---
       function resizeImage(file, maxW, maxH) {
         return new Promise(function(resolve, reject){
           var reader = new FileReader();
@@ -644,14 +655,20 @@
             var img = new Image();
             img.onload = function(){
               var w = img.width, h = img.height;
-              if (w <= maxW && h <= maxH) { resolve(e.target.result); return; }
-              var ratio = Math.min(maxW/w, maxH/h);
-              var nw = Math.round(w*ratio), nh = Math.round(h*ratio);
               var canvas = document.createElement('canvas');
-              canvas.width = nw; canvas.height = nh;
+              if (w <= maxW && h <= maxH) {
+                canvas.width = w; canvas.height = h;
+              } else {
+                var ratio = Math.min(maxW/w, maxH/h);
+                canvas.width = Math.round(w*ratio);
+                canvas.height = Math.round(h*ratio);
+              }
               var ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0, nw, nh);
-              resolve(canvas.toDataURL('image/jpeg', 0.75));
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              canvas.toBlob(function(blob){
+                var dataURL = canvas.toDataURL('image/jpeg', 0.75);
+                resolve({blob: blob, dataURL: dataURL});
+              }, 'image/jpeg', 0.75);
             };
             img.onerror = reject;
             img.src = e.target.result;
@@ -678,10 +695,23 @@
         try {
           var imagenData = '';
           var spot = editingId ? allData.find(function(s){return s.id===editingId}) : null;
+
           if (file) {
-            imagenData = await resizeImage(file, 800, 600);
+            // New file selected → upload to Storage (or fallback to base64)
+            var resized = await resizeImage(file, 800, 600);
+            if (storage) {
+              var filePath = 'graffiti/' + Date.now() + '.jpg';
+              var uploadTask = await storage.ref(filePath).put(resized.blob);
+              imagenData = await uploadTask.ref.getDownloadURL();
+              // If editing and old image was a storage URL, delete it
+              if (spot && spot.imagen && spot.imagen.indexOf('firebasestorage') !== -1) {
+                try { await storage.refFromURL(spot.imagen).delete(); } catch(ee) {}
+              }
+            } else {
+              imagenData = resized.dataURL; // fallback base64
+            }
           } else if (spot && spot.imagen) {
-            imagenData = spot.imagen;
+            imagenData = spot.imagen; // keep existing image
           }
 
           var docData = {
